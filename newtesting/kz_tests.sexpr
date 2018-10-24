@@ -1,0 +1,83 @@
+;; ddl transformed remote queries
+;; 0> rewritten query
+;; 1> remote query completion
+
+;; onion adjustment
+;; 0> are we in transaction?
+;; 1> rollback
+;; 2> start transaction
+;; 3> first adjustment
+;; 4> second adjustment
+;; 5> remote completion
+;; 6> commit
+;; 7..N> reissue
+
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ ;;;        create table
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(("CreateTable" t
+   ()                                               ;; setup
+   ("CREATE TABLE tee (x integer)"                  ;; test query
+    (:all-max tee))
+   ()                                               ;; comparison queries
+   ((:before 0 ((:does-not-exist tee x)))           ;; counter specific assertions
+    (:after  0 ((:exists tee x)
+                :check))
+    (:before 1 ((:exists tee x)
+                :check))
+    (:after  1 ((:exists tee x)
+                :check)))
+   (("DROP TABLE IF EXISTS tee")))                  ;; teardown
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ ;;;        drop table
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ ("DropTable" t
+   (("CREATE TABLE gorge (y integer)"               ;; setup
+     (:all-max gorge)))
+   ("DROP TABLE gorge")                             ;; test query
+   ()                                               ;; comparison queries
+   ((:before 0 ((:exists gorge y)                   ;; counter specific assertions
+                :check))
+    (:after  0 ((:does-not-exist gorge)
+                :check))
+    (:before 1 ((:does-not-exist gorge)
+                :check))
+    (:after  1 ((:does-not-exist gorge)
+                :check)))
+   (("DROP TABLE IF EXISTS gorge"                             ;; teardown
+     ()
+     :both
+     :ignore)))
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ ;;;;     ope adjustment
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ ("OPEAdjustment" t
+   (("CREATE TABLE ess (x integer)"                 ;; setup
+     (:all-max ess))
+    ("INSERT INTO ess VALUES (1), (2), (3)"))
+   ("SELECT * FROM ess WHERE x < 3")                ;; test query
+   (("SELECT * FROM ess ORDER BY x"))               ;; comparison queries
+   ((:before 5 :check)                              ;; counter specific assertions
+    (:after  5 :check)
+    (:before 6 :check)
+    (:before 7 (:update ess x oOrder OPE))
+    (:after  7 :check))
+   (("DROP TABLE ess")))                            ;; teardown
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ ;;;;    double adjustment
+ ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ ("DoubleAdjustment" t
+   (("CREATE TABLE dbl (x integer, y integer)"       ;; setup
+     (:all-max dbl))
+    ("INSERT INTO dbl VALUES
+      (1, 1), (2, 3), (3, 4), (4, 1)"))
+   ("SELECT * FROM dbl WHERE x = y")                 ;; test query
+   (("SELECT * FROM dbl")                            ;; comparison queries
+    ("SELECT SUM(x) FROM dbl")
+    ("SELEC * FROM dbl WHERE x < 3"))
+   ((:after  6  :check)                              ;; counter specific asserts
+    (:before 7  (:update dbl x oEq DETJOIN))
+    (:after  13 :check)
+    (:before 14 (:update dbl y oEq DETJOIN)))
+   (("DROP TABLE dbl"))))                            ;; teardown
+

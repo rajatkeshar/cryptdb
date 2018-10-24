@@ -1,0 +1,45 @@
+ERROR.fix :: cryptdb
+
+##############
+Run: ./scripts/install.rb:92: ./autogen.sh
+##############
+‘required file `./ltmain.sh' not found’
+##############
+
+cd cryptdb/proxy-src
+sudo autoreconf -i
+cp ltmain.sh ../
+
+after install.rb:91 add:
+mp_shell.>("cp -v ../ltmain.sh .")
+
+sudo ./scripts/install.rb .
+
+NOTE: Somehow, mp_shell.>("sudo autoreconf -i") won't execute successfully
+
+##############
+Run: ./scripts/install.rb:95: make
+##############
+error: ‘CLIENT_SECURE_CONNECTION’ undeclared (first use in this function)
+##############
+
+after /home/user/Downloads/cryptdb/proxy-src/plugins/admin/admin-plugin.c:97 add
+#define CLIENT_SECURE_CONNECTION 32768 /* New 4.1 authentication for MySQL5.6 */
+
+after /home/user/Downloads/cryptdb/proxy-src/tests/unit/t_network_mysqld_packet.c:37 add
+#define CLIENT_SECURE_CONNECTION 32768 /* New 4.1 authentication for MySQL5.6 */
+
+after /home/user/Downloads/cryptdb/proxy-src/src/network_mysqld_packet.c:33 add
+#define CLIENT_SECURE_CONNECTION 32768 /* New 4.1 authentication for MySQL5.6 */
+
+
+##############
+Run: ./scripts/install.rb: Building cryptdb ...
+##############
+Downgrade bison as follows:
+##############
+
+wget http://launchpadlibrarian.net/140087283/libbison-dev_2.7.1.dfsg-1_amd64.deb
+wget http://launchpadlibrarian.net/140087282/bison_2.7.1.dfsg-1_amd64.deb
+dpkg -i libbison-dev_2.7.1.dfsg-1_amd64.deb
+dpkg -i bison_2.7.1.dfsg-1_amd64.deb
